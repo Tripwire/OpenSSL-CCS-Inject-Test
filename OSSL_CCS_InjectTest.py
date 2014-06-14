@@ -1,10 +1,12 @@
+#!/bin/python
+
 import sys
 import socket
 import time
 import struct
 
 if len(sys.argv)<2:
-    print "Tripwire VERT CVE-2014-0224 Detection Tool (OpenSSL Change Cipher Spec Injection) by Tripwire VERT (@TripwireVERT)\nUsage: %s <host> [port=443]" % (sys.argv[0])
+    print "Tripwire VERT CVE-2014-0224 Detection Tool (OpenSSL Change Cipher Spec Injection) v0.2 by Tripwire VERT (@TripwireVERT)\nUsage: %s <host> [port=443]" % (sys.argv[0])
     quit()
 else:
     strHost = sys.argv[1]
@@ -12,12 +14,12 @@ else:
         try:
             iPort = int(sys.argv[2])
         except:
-            print "Tripwire VERT CVE-2014-0224 Detection Tool (OpenSSL Change Cipher Spec Injection)\nUsage: %s <host> [port=443]" % (sys.argv[0])
+            print "Tripwire VERT CVE-2014-0224 Detection Tool (OpenSSL Change Cipher Spec Injection) v0.2\nUsage: %s <host> [port=443]" % (sys.argv[0])
             quit()
     else:
         iPort = 443
 
-print "***CVE-2014-0224 Detection Tool***\nBrought to you by Tripwire VERT (@TripwireVERT)"
+print "***CVE-2014-0224 Detection Tool v0.2***\nBrought to you by Tripwire VERT (@TripwireVERT)"
         
 dSSL = {
     "SSLv3" : "\x03\x00",
@@ -359,7 +361,7 @@ for strVer in ["TLSv1.2","TLSv1.1","TLSv1","SSLv3"]:
     while iCount<5:
         iCount += 1
         try:
-            recv = s.recv(1500)
+            recv = s.recv(2048)
         except:
             continue
         lstRecords = getSSLRecords(recv)
@@ -394,17 +396,25 @@ for strVer in ["TLSv1.2","TLSv1.1","TLSv1","SSLv3"]:
             #print "Sending Change Cipher Spec"
             s.send(strChangeCipherSpec)
             fVuln = True
+            strLastMessage = ""
             while iCount < 5:
                 iCount += 1
                 s.settimeout(0.5)
                 try:
-                    recv = s.recv(1024)
+                    recv = s.recv(2048)
                 except socket.timeout:
                     #print "Timeout waiting for CCS reply."
                     continue
-                if (ord(recv[0])==21):
-                    fVuln = False
-                    break
+                if (len(recv)>0):
+                    strLastMessage = recv
+                    if (ord(recv[0])==21):
+                        fVuln = False
+                        break
+            try:
+                if ord(strLastMessage[-7]) == 21: # Check if an alert was at the end of the last message.
+                    fVuln=False
+            except IndexError:
+                pass
             if fVuln:
                 print "[%s] %s:%d allows early CCS" % (strVer,strHost,iPort)
                 iVulnCount += 1
