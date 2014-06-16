@@ -6,7 +6,7 @@ import time
 import struct
 
 if len(sys.argv)<2:
-    print "Tripwire VERT CVE-2014-0224 Detection Tool (OpenSSL Change Cipher Spec Injection) v0.2 by Tripwire VERT (@TripwireVERT)\nUsage: %s <host> [port=443]" % (sys.argv[0])
+    print "Tripwire VERT CVE-2014-0224 Detection Tool (OpenSSL Change Cipher Spec Injection) v0.3 by Tripwire VERT (@TripwireVERT)\nUsage: %s <host> [port=443]" % (sys.argv[0])
     quit()
 else:
     strHost = sys.argv[1]
@@ -14,12 +14,12 @@ else:
         try:
             iPort = int(sys.argv[2])
         except:
-            print "Tripwire VERT CVE-2014-0224 Detection Tool (OpenSSL Change Cipher Spec Injection) v0.2\nUsage: %s <host> [port=443]" % (sys.argv[0])
+            print "Tripwire VERT CVE-2014-0224 Detection Tool (OpenSSL Change Cipher Spec Injection) v0.3\nUsage: %s <host> [port=443]" % (sys.argv[0])
             quit()
     else:
         iPort = 443
 
-print "***CVE-2014-0224 Detection Tool v0.2***\nBrought to you by Tripwire VERT (@TripwireVERT)"
+print "***CVE-2014-0224 Detection Tool v0.3***\nBrought to you by Tripwire VERT (@TripwireVERT)"
         
 dSSL = {
     "SSLv3" : "\x03\x00",
@@ -405,6 +405,10 @@ for strVer in ["TLSv1.2","TLSv1.1","TLSv1","SSLv3"]:
                 except socket.timeout:
                     #print "Timeout waiting for CCS reply."
                     continue
+                except socket.error:
+                    print "Connection closed unexpectedly."
+                    fVuln=False
+                    break
                 if (len(recv)>0):
                     strLastMessage = recv
                     if (ord(recv[0])==21):
@@ -416,7 +420,15 @@ for strVer in ["TLSv1.2","TLSv1.1","TLSv1","SSLv3"]:
             except IndexError:
                 pass
             if fVuln:
-                print "[%s] %s:%d allows early CCS" % (strVer,strHost,iPort)
+                try:
+                    s.send('\x15' + dSSL[strVer] + '\x00\x02\x01\x00')
+                    f = s.recv(1024)
+                    if len(f) == 0:
+                        fVuln = False
+                except socket.error:
+                    fVuln = False
+            if fVuln:
+                print "[%s] %s:%d may allow early CCS" % (strVer,strHost,iPort)
                 iVulnCount += 1
             else:
                 print "[%s] %s:%d rejected early CCS" % (strVer,strHost,iPort)
@@ -427,7 +439,7 @@ for strVer in ["TLSv1.2","TLSv1.1","TLSv1","SSLv3"]:
     except:
         pass
 if iVulnCount > 0:
-    print "***This System Exhibits Potentially Vulnerable Behavior***"
+    print "***This System Exhibits Potentially Vulnerable Behavior***\nIf this system is using OpenSSL, it should be upgraded.\nNote: This is an experimental detection script and does not definitively determine vulnerable server status."
     quit(1)
 else:
     print "No need to patch."
