@@ -384,7 +384,7 @@ for strVer in ["TLSv1.2","TLSv1.1","TLSv1","SSLv3"]:
             #log(2, "Handshake missing or invalid.  Aborting.")
             continue
     if not (fServerHello and fCert):
-        print "%s Invalid handhsake." % (strLogPre)
+        print "%s Invalid handshake." % (strLogPre)
     elif len(recv)>0:
         #print "Received %d bytes. (%d)" % (len(recv),ord(recv[0]))
         if ord(recv[0])==22:
